@@ -58,7 +58,14 @@ export default function Footer() {
 
       <div className="border-t border-gray-700 text-center text-xs py-4">
         © {new Date().getFullYear()} R&amp;K. All rights reserved. &nbsp;|&nbsp; Powered by{' '}
-        <span className="text-brand-gold font-medium">levelose.tech</span>
+        <a
+          href="https://levelose.tech"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand-gold font-medium hover:underline"
+        >
+          levelose.tech
+        </a>
       </div>
     </footer>
   );

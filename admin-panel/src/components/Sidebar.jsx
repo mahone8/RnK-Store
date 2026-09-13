@@ -44,7 +44,17 @@ export default function Sidebar() {
         >
           Logout
         </button>
-        <p className="text-[10px] text-gray-500 text-center mt-4">Developed by levelose.tech</p>
+        <p className="text-[10px] text-gray-500 text-center mt-4">
+          Developed by{' '}
+          <a
+            href="https://levelose.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-panel-accent hover:underline"
+          >
+            levelose.tech
+          </a>
+        </p>
       </div>
     </aside>
   );

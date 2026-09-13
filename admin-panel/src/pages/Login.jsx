@@ -38,7 +38,17 @@ export default function Login() {
           />
           <button className="w-full bg-panel text-white py-2.5 rounded font-semibold hover:opacity-90">Login</button>
         </form>
-        <p className="text-[10px] text-gray-400 text-center mt-6">Developed by levelose.tech</p>
+        <p className="text-[10px] text-gray-400 text-center mt-6">
+          Developed by{' '}
+          <a
+            href="https://levelose.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:underline"
+          >
+            levelose.tech
+          </a>
+        </p>
       </div>
     </div>
   );
