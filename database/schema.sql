@@ -67,6 +67,15 @@ CREATE TABLE cart_items (
     UNIQUE (user_id, product_id)
 );
 
+-- UPLOADED IMAGES (admin panel product photos, stored in the database so
+-- they work on serverless hosts like Vercel; served at /api/images/:id)
+CREATE TABLE images (
+    id SERIAL PRIMARY KEY,
+    mime VARCHAR(60) NOT NULL,
+    data BYTEA NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 -- ORDERS
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,

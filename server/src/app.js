@@ -15,6 +15,7 @@ const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const db = require('./db');
 
 const app = express();
 
@@ -38,6 +39,20 @@ try {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', store: 'R&K', developer: 'levelose.tech' });
+});
+
+// Serve images uploaded via the admin panel (stored in the `images` table).
+// Rows are never modified after insert, so they can be cached forever.
+app.get('/api/images/:id', async (req, res, next) => {
+  try {
+    const result = await db.query('SELECT mime, data FROM images WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Image not found' });
+    res.set('Content-Type', result.rows[0].mime);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(result.rows[0].data);
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.use('/api/auth', authRoutes);

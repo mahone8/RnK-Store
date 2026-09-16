@@ -1,23 +1,9 @@
-// Handles local disk storage for product image uploads.
-// Uploaded files are saved to server/uploads/ and served statically
-// (see index.js) at /uploads/<filename>.
+// Handles product image uploads. Files are kept in memory and stored in the
+// `images` table in PostgreSQL, then served by the API at /api/images/:id.
+// This works everywhere — including read-only serverless hosts like Vercel,
+// where writing files to disk is not possible.
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-const uploadDir = path.join(__dirname, '..', '..', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, unique);
-  }
-});
+const db = require('../db');
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -30,9 +16,20 @@ function fileFilter(req, file, cb) {
 }
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+  limits: { fileSize: 4 * 1024 * 1024 } // 4MB (Vercel caps request bodies at ~4.5MB)
 });
 
-module.exports = { upload, uploadDir };
+// Store an uploaded image in the database and return its API URL,
+// e.g. "/api/images/3". The admin panel compresses photos before
+// upload, so rows stay small.
+async function saveImage(file) {
+  const result = await db.query(
+    'INSERT INTO images (mime, data) VALUES ($1, $2) RETURNING id',
+    [file.mimetype, file.buffer]
+  );
+  return `/api/images/${result.rows[0].id}`;
+}
+
+module.exports = { upload, saveImage };

@@ -1,10 +1,8 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const slugify = require('slugify');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-const { upload, uploadDir } = require('../middleware/upload');
+const { upload, saveImage } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -15,12 +13,14 @@ function parseBool(value, fallback) {
   return value === true || value === 'true';
 }
 
-// Helper: safely delete a locally-uploaded image file (ignores errors,
+// Helper: delete an image row that this product referenced (ignores errors,
 // and never touches external URLs like the seeded Unsplash images).
-function deleteLocalImage(imageUrl) {
-  if (imageUrl && imageUrl.startsWith('/uploads/')) {
-    const filePath = path.join(uploadDir, path.basename(imageUrl));
-    fs.unlink(filePath, () => {});
+async function deleteStoredImage(imageUrl) {
+  if (imageUrl && imageUrl.startsWith('/api/images/')) {
+    const id = parseInt(imageUrl.split('/').pop(), 10);
+    if (Number.isInteger(id)) {
+      await db.query('DELETE FROM images WHERE id = $1', [id]).catch(() => {});
+    }
   }
 }
 
@@ -118,7 +118,7 @@ router.post('/', requireAuth, requireAdmin, upload.single('image'), async (req, 
     const is_featured = parseBool(req.body.is_featured, false);
 
     // Prefer an uploaded file; fall back to a provided external URL.
-    const image_url = req.file ? `/uploads/${req.file.filename}` : (req.body.image_url || null);
+    const image_url = req.file ? await saveImage(req.file) : (req.body.image_url || null);
 
     const result = await db.query(
       `INSERT INTO products
@@ -160,8 +160,8 @@ router.put('/:id', requireAuth, requireAdmin, upload.single('image'), async (req
 
     let image_url = current.image_url;
     if (req.file) {
-      deleteLocalImage(current.image_url);
-      image_url = `/uploads/${req.file.filename}`;
+      await deleteStoredImage(current.image_url);
+      image_url = await saveImage(req.file);
     } else if (req.body.image_url) {
       image_url = req.body.image_url;
     }
@@ -180,12 +180,12 @@ router.put('/:id', requireAuth, requireAdmin, upload.single('image'), async (req
   }
 });
 
-// DELETE /api/products/:id - admin only (also removes a locally-stored image file)
+// DELETE /api/products/:id - admin only (also removes a stored upload image row)
 router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const existing = await db.query('SELECT image_url FROM products WHERE id = $1', [req.params.id]);
     await db.query('DELETE FROM products WHERE id = $1', [req.params.id]);
-    if (existing.rows[0]) deleteLocalImage(existing.rows[0].image_url);
+    if (existing.rows[0]) await deleteStoredImage(existing.rows[0].image_url);
     res.json({ message: 'Product deleted' });
   } catch (err) {
     console.error(err);

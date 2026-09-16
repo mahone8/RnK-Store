@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import api from '../api/axios';
 import { formatPKR } from '../utils/currency';
 import { resolveImage } from '../utils/image';
+import { compressImage } from '../utils/imageTools';
 
 const emptyForm = {
   name: '', description: '', price: '', compare_at_price: '', stock: 0,
@@ -72,7 +73,10 @@ export default function Products() {
       fd.append('category_id', form.category_id);
       fd.append('is_active', form.is_active);
       fd.append('is_featured', form.is_featured);
-      if (imageFile) fd.append('image', imageFile);
+      if (imageFile) {
+        const optimized = await compressImage(imageFile);
+        fd.append('image', optimized);
+      }
 
       if (editingId) {
         await api.put(`/products/${editingId}`, fd);
@@ -135,7 +139,7 @@ export default function Products() {
                 className="text-sm"
               />
             </div>
-            <p className="text-xs text-gray-400 mt-1">Upload a photo from your computer (JPG, PNG, WEBP or GIF, max 5MB).</p>
+            <p className="text-xs text-gray-400 mt-1">Upload a photo from your computer (JPG, PNG, WEBP or GIF). Large photos are automatically resized and compressed before saving.</p>
           </div>
 
           <textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="border rounded px-3 py-2 md:col-span-2" rows="3" />
